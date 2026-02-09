@@ -1,0 +1,141 @@
+# lancedb-cli
+
+A minimal command line application for managing LanceDB databases. This CLI tool provides an easy interface to query, update, and manage data stored in LanceDB.
+
+## Features
+
+- **Query Tables**: Retrieve data from LanceDB tables with filtering and column selection
+- **Interactive Mode**: Interactive SQL shell with command history and completion
+- **Direct SQL Execution**: Run complex SQL queries against LanceDB databases
+- **Data Management**: Insert, update, delete, and drop records
+- **Schema Inspection**: View the schema of tables
+- **Multiple Output Formats**: Display results as formatted tables or JSON
+- **Auto-completion**: Interactive mode includes SQL keywords and table name completion
+
+## Installation
+
+Install the package using pip:
+
+```bash
+pip install lancedb-cli
+```
+
+## Usage
+
+### Command Line
+
+List all tables in a database:
+
+```bash
+lsql list-tables /path/to/database
+```
+
+Query a table:
+
+```bash
+lsql query /path/to/database my_table --limit 10
+```
+
+View table schema:
+
+```bash
+lsql schema /path/to/database my_table
+```
+
+Execute SQL query:
+
+```bash
+lsql sql /path/to/database "SELECT * FROM my_table WHERE id > 5"
+```
+
+Update records:
+
+```bash
+lsql update /path/to/database my_table \
+  --set-clause "name='John',age=30" \
+  --where "id=1"
+```
+
+Delete records:
+
+```bash
+lsql delete /path/to/database my_table --where "id=1"
+```
+
+Empty a table:
+
+```bash
+lsql empty /path/to/database my_table
+```
+
+Drop a table:
+
+```bash
+lsql drop /path/to/database my_table --confirm
+```
+
+### Interactive Mode
+
+Start an interactive session:
+
+```bash
+lsql interactive /path/to/database
+```
+
+Inside the interactive shell, you can:
+
+- Type SQL queries directly
+- Use special commands:
+  - `.tables` - List all tables
+  - `.schema <table>` - Show table schema
+  - `.refresh` - Refresh all table views
+  - `.update <table> <set> <where>` - Update rows
+  - `.delete <table> <where>` - Delete rows
+  - `.empty <table>` - Empty a table
+  - `.drop <table>` - Drop a table
+  - `.exit` - Exit the interactive shell
+
+## Query Options
+
+- `--limit N`: Limit results to N rows (default: 10)
+- `--where <condition>`: Filter rows with SQL WHERE clause
+- `--select <columns>`: Select specific columns (comma-separated)
+- `--output <format>`: Output format: `table` (default) or `json`
+
+## Development
+
+To set up a development environment:
+
+```bash
+git clone https://github.com/yourusername/lancedb-cli.git
+cd lancedb-cli
+pip install -e ".[dev]"
+```
+
+Run tests:
+
+```bash
+pytest
+```
+
+## Requirements
+
+- Python 3.8 or higher
+- lancedb
+- duckdb
+- typer
+- rich
+- prompt-toolkit
+- pygments
+
+## License
+
+Apache 2.0 - see LICENSE file for details
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## Issues
+
+If you encounter any issues or have suggestions, please open an issue on GitHub.
