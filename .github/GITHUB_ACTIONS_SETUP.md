@@ -5,7 +5,7 @@ This project includes GitHub Actions workflows to automatically build and publis
 ## Workflows
 
 ### 1. **test-build.yml** (Automatic on push/PR)
-- Runs tests on Python 3.8, 3.9, 3.10, 3.11, 3.12
+- Runs tests on Python 3.9, 3.10, 3.11, 3.12
 - Tests package import and help command
 - Runs on every push to `main` or `develop` branches
 - Runs on all pull requests

@@ -1,6 +1,7 @@
 import typer
 import lancedb
 import duckdb
+import pandas as pd
 from pathlib import Path
 from typing import Optional, Dict, List, Any
 from rich.table import Table
@@ -33,6 +34,42 @@ def get_table_names(db: lancedb.DBConnection) -> List[str]:
     """Get list of table names from database."""
     result = db.list_tables()
     return result.tables if hasattr(result, 'tables') else result
+
+
+def validate_database_exists(db_path: str, create: bool = False) -> bool:
+    """Check if database exists at given path. Optionally create it if it doesn't.
+    
+    Args:
+        db_path: Path to the database
+        create: If True, create the database if it doesn't exist
+    
+    Returns:
+        True if database exists or was created successfully, False otherwise
+    """
+    path = Path(db_path)
+    
+    # Try to connect to the database
+    try:
+        db = lancedb.connect(db_path)
+        # If we can connect, it's valid
+        return True
+    except Exception as e:
+        # Connection failed
+        if not create:
+            console.print(f"[red]Error: Database path '{db_path}' is not a valid LanceDB database[/red]")
+            return False
+        
+        # Try to create the database
+        try:
+            # Create directory if it doesn't exist
+            path.mkdir(parents=True, exist_ok=True)
+            # Try to connect again - this should initialize the database
+            db = lancedb.connect(db_path)
+            console.print(f"[green]Created database at '{db_path}'[/green]")
+            return True
+        except Exception as create_err:
+            console.print(f"[red]Error creating database: {create_err}[/red]")
+            return False
 
 
 def validate_table_exists(db: lancedb.DBConnection, table_name: str) -> bool:
@@ -116,9 +153,15 @@ def render_results(results, title: str = "Results", output_format: str = "table"
 
 
 @app.command()
-def list_tables(db_path: str = typer.Argument(..., help="Path to the lancedb database")) -> None:
+def list_tables(
+    db_path: str = typer.Argument(..., help="Path to the lancedb database"),
+    create: bool = typer.Option(False, "--create", help="Create the database if it doesn't exist"),
+) -> None:
     """List all tables in a lancedb database."""
     try:
+        if not validate_database_exists(db_path, create=create):
+            raise typer.Exit(1)
+        
         db = lancedb.connect(db_path)
         tables = get_table_names(db)
         
@@ -142,9 +185,13 @@ def query(
     where: Optional[str] = typer.Option(None, help="Where clause filter (SQL syntax)"),
     select: Optional[str] = typer.Option(None, help="Columns to select (comma-separated)"),
     output: str = typer.Option("table", help="Output format (table, json)"),
+    create: bool = typer.Option(False, "--create", help="Create the database if it doesn't exist"),
 ) -> None:
     """Query a table from a lancedb database."""
     try:
+        if not validate_database_exists(db_path, create=create):
+            raise typer.Exit(1)
+        
         db = lancedb.connect(db_path)
         
         if not validate_table_exists(db, table):
@@ -179,9 +226,13 @@ def query(
 def schema(
     db_path: str = typer.Argument(..., help="Path to the lancedb database"),
     table: str = typer.Argument(..., help="Table name"),
+    create: bool = typer.Option(False, "--create", help="Create the database if it doesn't exist"),
 ) -> None:
     """Show schema of a table in a lancedb database."""
     try:
+        if not validate_database_exists(db_path, create=create):
+            raise typer.Exit(1)
+        
         db = lancedb.connect(db_path)
         
         if not validate_table_exists(db, table):
@@ -201,9 +252,13 @@ def sql(
     db_path: str = typer.Argument(..., help="Path to the lancedb database"),
     sql_query: str = typer.Argument(..., help="SQL query to execute"),
     output: str = typer.Option("table", help="Output format (table, json)"),
+    create: bool = typer.Option(False, "--create", help="Create the database if it doesn't exist"),
 ) -> None:
     """Execute a SQL query against a lancedb database."""
     try:
+        if not validate_database_exists(db_path, create=create):
+            raise typer.Exit(1)
+        
         db = lancedb.connect(db_path)
         
         # Register all tables in duckdb
@@ -228,9 +283,13 @@ def delete(
     db_path: str = typer.Argument(..., help="Path to the lancedb database"),
     table: str = typer.Argument(..., help="Table name to delete from"),
     where: str = typer.Option(..., help="WHERE clause to specify rows to delete (SQL syntax)"),
+    create: bool = typer.Option(False, "--create", help="Create the database if it doesn't exist"),
 ) -> None:
     """Delete rows from a table in a lancedb database."""
     try:
+        if not validate_database_exists(db_path, create=create):
+            raise typer.Exit(1)
+        
         db = lancedb.connect(db_path)
         
         if not validate_table_exists(db, table):
@@ -256,9 +315,13 @@ def delete(
 def empty(
     db_path: str = typer.Argument(..., help="Path to the lancedb database"),
     table: str = typer.Argument(..., help="Table name to empty"),
+    create: bool = typer.Option(False, "--create", help="Create the database if it doesn't exist"),
 ) -> None:
     """Empty a table by deleting all rows."""
     try:
+        if not validate_database_exists(db_path, create=create):
+            raise typer.Exit(1)
+        
         db = lancedb.connect(db_path)
         
         if not validate_table_exists(db, table):
@@ -285,9 +348,13 @@ def drop(
     db_path: str = typer.Argument(..., help="Path to the lancedb database"),
     table: str = typer.Argument(..., help="Table name to drop"),
     confirm: bool = typer.Option(False, "--confirm", help="Confirm deletion without prompt"),
+    create: bool = typer.Option(False, "--create", help="Create the database if it doesn't exist"),
 ) -> None:
     """Drop (delete) an entire table from the database."""
     try:
+        if not validate_database_exists(db_path, create=create):
+            raise typer.Exit(1)
+        
         db = lancedb.connect(db_path)
         
         if not validate_table_exists(db, table):
@@ -318,9 +385,13 @@ def update(
     table: str = typer.Argument(..., help="Table name to update"),
     set_clause: str = typer.Option(..., help="SET clause with column=value pairs (e.g., 'col1=10,col2=value')"),
     where: str = typer.Option(..., help="WHERE clause to specify rows to update (SQL syntax)"),
+    create: bool = typer.Option(False, "--create", help="Create the database if it doesn't exist"),
 ) -> None:
     """Update rows in a table that match a given expression."""
     try:
+        if not validate_database_exists(db_path, create=create):
+            raise typer.Exit(1)
+        
         db = lancedb.connect(db_path)
         
         if not validate_table_exists(db, table):
@@ -355,11 +426,116 @@ def update(
 
 
 @app.command()
+def load(
+    db_path: str = typer.Argument(..., help="Path to the lancedb database"),
+    csv_file: str = typer.Argument(..., help="Path to CSV file to load"),
+    table: str = typer.Argument(..., help="Table name to load data into"),
+    overwrite: bool = typer.Option(False, "--overwrite", help="Overwrite table if it exists"),
+    create: bool = typer.Option(False, "--create", help="Create the database if it doesn't exist"),
+) -> None:
+    """Load a CSV file into a table in a lancedb database."""
+    try:
+        if not validate_database_exists(db_path, create=create):
+            raise typer.Exit(1)
+        
+        # Check if CSV file exists
+        csv_path = Path(csv_file)
+        if not csv_path.exists():
+            console.print(f"[red]Error: CSV file '{csv_file}' not found[/red]")
+            raise typer.Exit(1)
+        
+        # Read CSV file
+        try:
+            df = pd.read_csv(csv_path)
+        except Exception as e:
+            console.print(f"[red]Error reading CSV file: {e}[/red]")
+            raise typer.Exit(1)
+        
+        if len(df) == 0:
+            console.print(f"[red]Error: CSV file is empty[/red]")
+            raise typer.Exit(1)
+        
+        db = lancedb.connect(db_path)
+        
+        # Check if table exists
+        table_names = get_table_names(db)
+        if table in table_names:
+            if not overwrite:
+                console.print(f"[red]Error: Table '{table}' already exists[/red]")
+                console.print("[yellow]Use --overwrite to replace it[/yellow]")
+                raise typer.Exit(1)
+        
+        # Create or overwrite table using lancedb's mode parameter
+        mode = "overwrite" if overwrite else "create"
+        db.create_table(table, data=df, mode=mode)
+        
+        if overwrite and table in table_names:
+            console.print(f"[green]Successfully overwrote table '{table}'[/green]")
+        else:
+            console.print(f"[green]Successfully loaded CSV file into table '{table}'[/green]")
+        console.print(f"[cyan]Rows: {len(df)}, Columns: {len(df.columns)}[/cyan]")
+        
+    except typer.Exit:
+        raise
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)
+
+
+@app.command()
+def dump(
+    db_path: str = typer.Argument(..., help="Path to the lancedb database"),
+    table: str = typer.Argument(..., help="Table name to dump"),
+    output: str = typer.Argument(..., help="Output CSV file path"),
+    overwrite: bool = typer.Option(False, "--overwrite", help="Overwrite output file if it exists"),
+) -> None:
+    """Dump a table from a lancedb database to a CSV file."""
+    try:
+        if not validate_database_exists(db_path):
+            raise typer.Exit(1)
+        
+        db = lancedb.connect(db_path)
+        
+        if not validate_table_exists(db, table):
+            raise typer.Exit(1)
+        
+        # Check if output file exists
+        output_path = Path(output)
+        if output_path.exists() and not overwrite:
+            console.print(f"[red]Error: Output file '{output}' already exists[/red]")
+            console.print("[yellow]Use --overwrite to replace it[/yellow]")
+            raise typer.Exit(1)
+        
+        # Create parent directories if needed
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        # Get table and convert to DataFrame
+        tbl = db.open_table(table)
+        df = tbl.to_pandas()
+        
+        # Write to CSV
+        df.to_csv(output_path, index=False)
+        
+        console.print(f"[green]Successfully dumped table '{table}' to '{output}'[/green]")
+        console.print(f"[cyan]Rows: {len(df)}, Columns: {len(df.columns)}[/cyan]")
+        
+    except typer.Exit:
+        raise
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise typer.Exit(1)
+
+
+@app.command()
 def interactive(
     db_path: str = typer.Argument(..., help="Path to the lancedb database"),
+    create: bool = typer.Option(False, "--create", help="Create the database if it doesn't exist"),
 ) -> None:
     """Interactive CLI for querying lancedb database."""
     try:
+        if not validate_database_exists(db_path, create=create):
+            raise typer.Exit(1)
+        
         db = lancedb.connect(db_path)
         
         # sql_keywords list

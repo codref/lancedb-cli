@@ -1,0 +1,11 @@
+id,name,email,age,city,salary
+1,Alice Johnson,alice@example.com,28,New York,75000
+2,Bob Smith,bob@example.com,34,San Francisco,95000
+3,Carol White,carol@example.com,29,Seattle,88000
+4,David Brown,david@example.com,45,Boston,120000
+5,Eve Davis,eve@example.com,31,Austin,82000
+6,Frank Miller,frank@example.com,38,Denver,91000
+7,Grace Lee,grace@example.com,26,Portland,68000
+8,Henry Wilson,henry@example.com,42,Chicago,110000
+9,Iris Martinez,iris@example.com,33,Miami,85000
+10,Jack Taylor,jack@example.com,29,Los Angeles,79000
